@@ -121,8 +121,9 @@ export function WeekGrid({
 
   React.useEffect(() => {
     const el = bodyRef.current
-    if (!el || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(() => {
+    const Observer = (el?.ownerDocument.defaultView as typeof window | null)?.ResizeObserver ?? globalThis.ResizeObserver
+    if (!el || !Observer) return
+    const ro = new Observer(() => {
       setColWidth(Math.max(0, (el.clientWidth - 48) / dayCount))
     })
     ro.observe(el)

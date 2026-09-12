@@ -511,6 +511,33 @@ describe('Calendar shell chrome', () => {
     expect(root?.firstElementChild).toHaveClass('calendar-topbar')
   })
 
+  it('measures both the calendar shell and week grid using the visible iframe observer', async () => {
+    const frame = document.createElement('iframe')
+    document.body.append(frame)
+    const container = frame.contentDocument!.body.appendChild(frame.contentDocument!.createElement('div'))
+    const observed: Element[] = []
+    const disconnect = vi.fn()
+    class FrameObserver {
+      constructor(private readonly callback: ResizeObserverCallback) {}
+      observe(target: Element): void {
+        expect(target.ownerDocument === frame.contentDocument).toBe(true)
+        observed.push(target)
+        this.callback([{ contentRect: { width: 300 } } as ResizeObserverEntry], this as unknown as ResizeObserver)
+      }
+      disconnect = disconnect
+      unobserve(): void {}
+    }
+    Object.defineProperty(frame.contentWindow, 'ResizeObserver', { value: FrameObserver })
+    const mounted = render(React.createElement(Calendar, { variant: 'main' }), { container })
+    try {
+      await waitFor(() => expect(container.querySelector('.calendar-view')?.classList.contains('calendar-view-compact')).toBe(true))
+      expect(observed.some((element) => element === container.querySelector('.calendar-view'))).toBe(true)
+      await waitFor(() => expect(observed.some((element) => element === container.querySelector('.calendar-weekgrid-body'))).toBe(true))
+      mounted.unmount()
+      expect(disconnect).toHaveBeenCalledTimes(observed.length)
+    } finally { mounted.unmount(); frame.remove() }
+  })
+
   it('keeps the right-sidebar calendar on the compact topbar path', async () => {
     const { container } = render(React.createElement(Calendar, { variant: 'right' }))
     await screen.findByRole('heading', { name: /W23\s+2026/i })

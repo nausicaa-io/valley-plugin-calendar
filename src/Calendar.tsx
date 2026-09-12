@@ -262,8 +262,9 @@ export function Calendar({
   // width back across a single threshold can't oscillate (flicker).
   React.useEffect(() => {
     const el = rootRef.current
-    if (!el || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver((entries) => {
+    const Observer = (el?.ownerDocument.defaultView as typeof window | null)?.ResizeObserver ?? globalThis.ResizeObserver
+    if (!el || !Observer) return
+    const ro = new Observer((entries) => {
       const width = entries[0]?.contentRect.width ?? el.clientWidth
       setCompact((prev) => (prev ? width <= 380 : width < 340))
     })
