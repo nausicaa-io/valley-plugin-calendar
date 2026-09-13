@@ -9,6 +9,9 @@ import { createReloadQueue } from '../src/reloadQueue'
 import { useCalendarData } from '../src/useCalendarData'
 import { AgendaPanel } from '../src/AgendaPanel'
 import { initLocalization } from '../src/localization'
+import { loadEvents } from '../src/events'
+import { loadNoteDateSources, saveNoteDateSources } from '../src/noteDateStore'
+import { defaultNoteDateSource } from '../src/noteDates'
 
 afterEach(cleanup)
 
@@ -34,7 +37,7 @@ it('keeps Agenda typing, clear, and Escape inside the same shared search frame',
   expect(screen.getByRole('textbox', { name: 'Search agenda' })).toBe(input)
 })
 
-it('coalesces a contributed-item burst per mounted surface and publishes the newest result', async () => {
+it('shares a contributed-item burst across mounted surfaces and publishes the newest result', async () => {
   const mock = createMockValleyApi({ manifest: { id: 'calendar' } })
   initRuntime(mock.api)
   let release!: () => void
@@ -48,21 +51,49 @@ it('coalesces a contributed-item burst per mounted surface and publishes the new
   const offProvider = mock.provideInterop(CALENDAR_ITEM_SOURCE_V1, { list }, 'todo')
   const main = renderHook(useSourcedItems)
   const sidebar = renderHook(useSourcedItems)
-  expect(list).toHaveBeenCalledTimes(2)
+  expect(list).toHaveBeenCalledTimes(1)
   await act(async () => {
     title = 'After'
     for (let revision = 1; revision <= 20; revision++) {
       mock.api.interop.state.publish(CALENDAR_ITEM_SOURCE_REVISION_V1, revision)
     }
   })
-  expect(list).toHaveBeenCalledTimes(2)
+  expect(list).toHaveBeenCalledTimes(1)
   await act(async () => { release() })
   await waitFor(() => {
     expect(main.result.current.items[0]?.item.title).toBe('After')
     expect(sidebar.result.current.items[0]?.item.title).toBe('After')
   })
-  expect(list).toHaveBeenCalledTimes(4)
+  expect(list).toHaveBeenCalledTimes(2)
   main.unmount(); sidebar.unmount(); offProvider()
+})
+
+it('shares identical event ranges without conflating different ranges', async () => {
+  const mock = createMockValleyApi({ manifest: { id: 'calendar' }, datasets: { 'calendar.events': [{ id: 'fern', title: 'Fern', date: '2026-08-24' }] } })
+  initRuntime(mock.api)
+  const dataset = mock.api.data.dataset
+  const ranges: unknown[] = []
+  mock.api.data.dataset = ((id: string) => {
+    const handle = dataset(id)
+    return { ...handle, query: async (query) => { if (id === 'calendar.events') ranges.push(query?.where); return handle.query(query) } }
+  }) as typeof dataset
+  const results = await Promise.all([loadEvents('2026-08-01', '2026-08-31'), loadEvents('2026-08-01', '2026-08-31'), loadEvents('2026-09-01', '2026-09-30')])
+  expect(ranges).toHaveLength(2)
+  expect(results.map((items) => items.length)).toEqual([1, 1, 0])
+})
+
+it.each([999, 1000, 1001])('loads and edits every one of %i note-date sources atomically', async (count) => {
+  const sources = Array.from({ length: count }, (_, position) => ({ ...defaultNoteDateSource(), id: `source-${position}`, title: `Source ${position}` }))
+  const mock = createMockValleyApi({ manifest: { id: 'calendar' }, datasets: { 'calendar.note_date_sources': sources.map((definition, position) => ({ id: definition.id, position, definition })) } })
+  initRuntime(mock.api)
+  expect((await loadNoteDateSources()).map((source) => source.id)).toEqual(sources.map((source) => source.id))
+  const next = sources.slice().reverse().map((source) => ({ ...source, title: `${source.title} edited` }))
+  await saveNoteDateSources(next)
+  expect((await loadNoteDateSources()).map(({id,title})=>({id,title}))).toEqual(next.map(({id,title})=>({id,title})))
+  if (count === 1001) {
+    await expect(saveNoteDateSources([])).rejects.toThrow('1000 operations')
+    expect(await loadNoteDateSources()).toHaveLength(count)
+  }
 })
 
 it('finishes an accepted read after unmount without starting queued reloads or publishing stale state', async () => {

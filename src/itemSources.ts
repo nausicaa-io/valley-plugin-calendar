@@ -77,7 +77,17 @@ function isSourceItem(value: unknown): value is CalendarSourceItem {
   return typeof item.id === 'string' && typeof item.title === 'string' && typeof item.date === 'string'
 }
 
-export async function listSourcedItems(strict = false): Promise<SourcedItem[]> {
+export function listSourcedItems(strict = false): Promise<SourcedItem[]> {
+  const reads = api.runtime.getOrCreate('calendar.sourceReads', () => new Map<boolean, Promise<SourcedItem[]>>())
+  let pending = reads.get(strict)
+  if (!pending) {
+    pending = readSourcedItems(strict).finally(() => { reads.delete(strict) })
+    reads.set(strict, pending)
+  }
+  return pending
+}
+
+async function readSourcedItems(strict: boolean): Promise<SourcedItem[]> {
   const lists = await Promise.all(sources().map(async (source) => {
     const result = await source.invoke('list')
     if (!result.ok || !Array.isArray(result.value)) {

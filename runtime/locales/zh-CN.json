@@ -313,5 +313,6 @@
   "backend.continuation": "Microsoft Graph 后续页面 URL 无效。",
   "backend.microsoft": "Microsoft Graph 日历获取失败：{{status}}",
   "backend.googleList": "Google 日历列表获取失败：{{status}}",
-  "backend.googleFetch": "Google 日历获取失败：{{status}}"
+  "backend.googleFetch": "Google 日历获取失败：{{status}}",
+  "calendar.error.atomicLimit": "此更改超出了 1000 次操作的原子限制。请一次删除较少的来源。"
 }

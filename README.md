@@ -30,3 +30,5 @@ npm run check
 The check validates types and package boundaries, runs the package tests, and rebuilds `runtime/`. It requires no Valley source checkout. Keep the rebuilt runtime, locale files, dependency lock, and vendored tools with each release. Increment the package and manifest versions together.
 
 Valley release maintainers explicitly import the compiled artifact into the application’s `plugins.lock.json`; building Valley does not build or read this repository. All privileged work uses declared SDK capabilities, authenticated IPC, and explicit grants. Disabling or unloading the plugin releases its subscriptions and resources.
+
+Version 3.1 shares identical in-flight event ranges and contributed-item reads across surfaces. Note-date sources load every page, and definition edits batch changed rows atomically without deleting retained definitions. A removal exceeding the host’s 1,000-operation limit reports an error before writing.

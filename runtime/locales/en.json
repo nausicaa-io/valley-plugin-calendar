@@ -313,5 +313,6 @@
   "backend.continuation": "Invalid Microsoft Graph continuation URL.",
   "backend.microsoft": "Microsoft Graph calendar fetch failed: {{status}}",
   "backend.googleList": "Google Calendar list failed: {{status}}",
-  "backend.googleFetch": "Google Calendar fetch failed: {{status}}"
+  "backend.googleFetch": "Google Calendar fetch failed: {{status}}",
+  "calendar.error.atomicLimit": "This change exceeds the atomic limit of 1000 operations. Remove fewer sources at once."
 }

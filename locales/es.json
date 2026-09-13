@@ -313,5 +313,6 @@
   "backend.continuation": "URL de continuación de Microsoft Graph no válida.",
   "backend.microsoft": "No se pudo obtener el calendario de Microsoft Graph: {{status}}",
   "backend.googleList": "No se pudo obtener la lista de Google Calendar: {{status}}",
-  "backend.googleFetch": "No se pudo obtener Google Calendar: {{status}}"
+  "backend.googleFetch": "No se pudo obtener Google Calendar: {{status}}",
+  "calendar.error.atomicLimit": "Este cambio supera el límite atómico de 1000 operaciones. Elimina menos fuentes a la vez."
 }

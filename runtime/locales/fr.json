@@ -313,5 +313,6 @@
   "backend.continuation": "URL de continuation Microsoft Graph invalide.",
   "backend.microsoft": "Échec du chargement du calendrier Microsoft Graph : {{status}}",
   "backend.googleList": "Échec du chargement de la liste Google Agenda : {{status}}",
-  "backend.googleFetch": "Échec du chargement de Google Agenda : {{status}}"
+  "backend.googleFetch": "Échec du chargement de Google Agenda : {{status}}",
+  "calendar.error.atomicLimit": "Cette modification dépasse la limite atomique de 1000 opérations. Supprimez moins de sources à la fois."
 }

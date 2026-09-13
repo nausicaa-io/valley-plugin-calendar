@@ -196,7 +196,18 @@ function forWrite(record: EventRecord): EventRecord {
   }
 }
 
-export async function loadEvents(startDate?: string, endDate?: string): Promise<EventRecord[]> {
+export function loadEvents(startDate?: string, endDate?: string): Promise<EventRecord[]> {
+  const reads = api.runtime.getOrCreate('calendar.eventReads', () => new Map<string, Promise<EventRecord[]>>())
+  const key = JSON.stringify([startDate ?? null, endDate ?? null])
+  let pending = reads.get(key)
+  if (!pending) {
+    pending = readEvents(startDate, endDate).finally(() => { reads.delete(key) })
+    reads.set(key, pending)
+  }
+  return pending
+}
+
+async function readEvents(startDate?: string, endDate?: string): Promise<EventRecord[]> {
   const where: DatasetWhere | undefined = startDate && endDate
     ? { date: { lte: endDate }, or: [{ endDate: { gte: startDate } }, { endDate: { isNull: true }, date: { gte: startDate } }] }
     : undefined

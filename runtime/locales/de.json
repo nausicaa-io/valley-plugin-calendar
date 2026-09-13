@@ -313,5 +313,6 @@
   "backend.continuation": "Ungültige URL für die nächste Microsoft-Graph-Seite.",
   "backend.microsoft": "Microsoft-Graph-Kalender konnte nicht geladen werden: {{status}}",
   "backend.googleList": "Google-Kalenderliste konnte nicht geladen werden: {{status}}",
-  "backend.googleFetch": "Google-Kalender konnte nicht geladen werden: {{status}}"
+  "backend.googleFetch": "Google-Kalender konnte nicht geladen werden: {{status}}",
+  "calendar.error.atomicLimit": "Diese Änderung überschreitet das atomare Limit von 1000 Vorgängen. Entferne weniger Quellen auf einmal."
 }

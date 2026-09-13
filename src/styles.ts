@@ -1138,16 +1138,18 @@ const CSS = `
 .agenda-card {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
-  padding: 6px 8px;
+  padding: var(--space-button) var(--space-2);
   border: none;
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm);
   background: transparent;
   text-align: left;
   cursor: pointer;
 }
-.agenda-card:hover { background: var(--bg-hover, rgba(0, 0, 0, 0.04)); }
+.agenda-card:hover,
+.agenda-card:has([data-plugin-widget-hover]),
+.agenda-card:focus-visible { background: var(--hover-bg); }
 .agenda-card-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; align-self: flex-start; margin-top: 4px; }
 .agenda-card-body {
   flex: 1 1 auto;
