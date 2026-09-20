@@ -329,3 +329,11 @@ export const NoteDateGlyph = ({ id, className }: { id?: string; className?: stri
   const glyph = id ? GLYPH_PATHS[id] : undefined
   return glyph ? <Svg className={className}>{glyph()}</Svg> : null
 }
+
+export const ValleyIcon = (p: IconProps): ReactElement => (
+  <svg className={p.className} width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"
+    style={{ mask: 'var(--icon-open-in-new) center / contain no-repeat' }}>
+    {p.title ? <title>{p.title}</title> : null}
+    <rect width="24" height="24" fill="currentColor" />
+  </svg>
+)

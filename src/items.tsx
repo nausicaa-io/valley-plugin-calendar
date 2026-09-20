@@ -12,7 +12,7 @@ import { CALENDAR_ITEM_ACTION_EDIT } from '@valley/plugin-sdk'
 import type { NoteDateEntry } from './noteDates'
 import { addDays, daysBetween } from './dateMath'
 import { canOpenLocation, canOpenUrl, openLocation, openUrl } from './fields'
-import { Checklist, ChevronRight, FileText, ItemBadges, Link, MapPin, NoteDateGlyph, Paperclip, Pencil, badgeLabels } from './icons'
+import { Checklist, ChevronRight, ValleyIcon, ItemBadges, Link, MapPin, NoteDateGlyph, Paperclip, Pencil, badgeLabels } from './icons'
 import { updateEvent } from './events'
 import { runSourcedItemAction, sourcedItemActions, updateSourcedItem, type SourcedItem } from './itemSources'
 import { uiText } from './localization'
@@ -322,7 +322,7 @@ function providerLabel(action: CalendarItemAction): string {
  */
 function actionGlyph(icon: CalendarItemActionIcon | undefined): ReactElement | undefined {
   switch (icon) {
-    case 'note': return <FileText />
+    case 'note': return <ValleyIcon />
     case 'attachment': return <Paperclip />
     case 'link': return <Link />
     case 'map': return <MapPin />
@@ -383,7 +383,7 @@ export function openNoteMenuItem(item: CalItem): UiMenuItem[] {
   return [{
     id: 'open-note',
     label: uiText('auto.c66a827e3397'),
-    icon: <FileText />,
+    icon: <ValleyIcon />,
     onSelect: () => api.workspace.openFile(relPath)
   }]
 }
