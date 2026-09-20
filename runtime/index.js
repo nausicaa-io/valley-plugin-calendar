@@ -17,6 +17,10 @@ var Es=new Map;function pe(e,t,a,r,o,i,d,s,c="owner"){let u=Object.freeze({id:e,
   padding: 0;
 }
 
+.calendar-view-main {
+  container: calendar-main / inline-size;
+}
+
 /* Calendar top bar \u2014 37px content invariant (see CLAUDE.md). Full-bleed,
    sits above the padded body so the grid keeps its own inset. */
 .calendar-topbar {
@@ -89,6 +93,24 @@ var Es=new Map;function pe(e,t,a,r,o,i,d,s,c="owner"){let u=Object.freeze({id:e,
   min-width: 24px;
   font-size: 0.7rem;
   line-height: 1;
+}
+
+@container calendar-main (max-width: 520px) {
+  .calendar-view-main .calendar-topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    height: auto;
+  }
+  .calendar-view-main .calendar-topbar-leading {
+    min-height: var(--app-bar-height);
+    margin-right: var(--plugin-actions-offset, 0px);
+  }
+  .calendar-view-main .calendar-topbar-actions {
+    justify-content: space-between;
+    flex-wrap: wrap;
+    margin: 0 0 var(--space-2, 8px);
+  }
 }
 
 .calendar-view-sidebar .calendar-topbar {
