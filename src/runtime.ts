@@ -10,9 +10,62 @@ import { normalizeTimeRange } from '@valley/plugin-sdk/timeControl'
 export let React!: typeof import('react')
 export let api!: ValleyPluginApi
 
-export function initRuntime(a: ValleyPluginApi): void {
+interface ReadOwners {
+  disposed: boolean
+  epoch: number
+  off?: () => void
+  disposal?: Promise<void>
+  retired?: Promise<void>
+  values: Map<string, { dispose: () => void | Promise<void>; invalidate?: () => void }>
+}
+
+let activeOwners: ReadOwners | undefined
+
+function disposeOwners(owners: ReadOwners): Promise<void> {
+  if (owners.disposal) return owners.disposal
+  owners.disposed = true
+  owners.off?.()
+  const values = [...owners.values.values()]
+  owners.values.clear()
+  const retired = owners.retired
+  owners.disposal = (async () => {
+    const results = await Promise.allSettled([...values.map(value => value.dispose()), retired])
+    const failure = results.find(result => result.status === 'rejected')
+    if (failure?.status === 'rejected') throw failure.reason
+  })()
+  return owners.disposal
+}
+
+export function initRuntime(a: ValleyPluginApi): () => Promise<void> {
+  const retired = api !== a && activeOwners ? disposeOwners(activeOwners) : undefined
+  void retired?.catch(() => {})
   api = a
   React = a.React
+  const owners = a.runtime.getOrCreate<ReadOwners>('calendar.readOwners', () => ({ disposed: false, epoch: 0, values: new Map() }))
+  const epoch = ++owners.epoch
+  owners.retired = retired ?? owners.disposal ?? owners.retired
+  owners.disposal = undefined
+  owners.disposed = false
+  owners.off?.()
+  let vault = a.getState().vault?.path
+  owners.off = a.subscribeState(['vault'], () => {
+    const next = a.getState().vault?.path
+    if (next === vault) return
+    vault = next
+    for (const value of owners.values.values()) value.invalidate?.()
+  })
+  activeOwners = owners
+  return () => owners.epoch === epoch ? disposeOwners(owners) : Promise.resolve()
+}
+
+export function readOwner<T extends { dispose: () => void | Promise<void> }>(key: string, create: (owner: ValleyPluginApi) => T): T {
+  if (!activeOwners || activeOwners.disposed) throw new Error('Calendar read owner is disposed.')
+  let value = activeOwners.values.get(key)
+  if (!value) {
+    value = create(api)
+    activeOwners.values.set(key, value)
+  }
+  return value as T
 }
 
 interface RevealTargetStore {

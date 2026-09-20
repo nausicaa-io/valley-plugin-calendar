@@ -1,6 +1,5 @@
 import { React, api } from './runtime'
 import type { FC, ReactElement } from 'react'
-import type { IndexEntry } from '@valley/plugin-sdk/types'
 import { parseDatePattern } from '@valley/plugin-sdk/datePattern'
 import { paletteCssContrast, paletteCssValue, paletteRef } from '@valley/plugin-sdk/palette'
 import { Eye, EyeOff, noteDateGlyphs, NoteDateGlyph, Plus, Trash, X } from './icons'
@@ -14,7 +13,8 @@ import {
   type NoteDateSource
 } from './noteDates'
 import { loadNoteDateSources, saveNoteDateSources } from './noteDateStore'
-import { useHostState } from './hooks'
+import { useNoteIndex } from './noteIndex'
+import type { NoteDateIndexEntry } from './noteDates'
 import { uiText } from './localization'
 
 const Button: typeof api.ui.settings.Button = (props) => React.createElement(api.ui.settings.Button, props)
@@ -194,7 +194,7 @@ const GlyphPicker: FC<{
  * otherwise indistinguishable from an empty vault — nothing appears anywhere and
  * nothing says why. Silent on an unfinished rule.
  */
-const MatchStats: FC<{ source: NoteDateSource; entries: IndexEntry[] }> = ({ source, entries }) => {
+const MatchStats: FC<{ source: NoteDateSource; entries: NoteDateIndexEntry[] }> = ({ source, entries }) => {
   const stats = React.useMemo(
     () => sourceMatchStats(entries, source),
     // Only the fields the predicate and the date parse actually read.
@@ -225,7 +225,7 @@ const MatchStats: FC<{ source: NoteDateSource; entries: IndexEntry[] }> = ({ sou
 
 const SourceRow: FC<{
   source: NoteDateSource
-  entries: IndexEntry[]
+  entries: NoteDateIndexEntry[]
   onChange: (patch: Partial<NoteDateSource>) => void
   onDelete: () => void
 }> = ({ source, entries, onChange, onDelete }) => {
@@ -467,7 +467,7 @@ const SourceRow: FC<{
 /** Settings → Calendar → Note dates: the sources that scrape notes for dates. */
 export const NoteDatesSection: FC = () => {
   const { Row } = api.ui.settings
-  const { indexEntries } = useHostState()
+  const indexEntries = useNoteIndex()
   const [sources, setSources] = React.useState<NoteDateSource[] | null>(null)
   React.useEffect(() => {
     let alive = true

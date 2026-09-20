@@ -12,6 +12,7 @@ import { loadEvents, newEvent, normalizeEventRecord, rawAppend, rawDelete, rawUp
 import { listSourcedItems, sourceDescriptors, sourcedItemActions, updateSourcedItem, removeSourcedItem, createSourcedItem, runSourcedItemAction } from './itemSources'
 import { getRemoteStore } from './remoteSync'
 import { eventToItem, sourcedToItem, requestCalendarItemEdit, type CalItem } from './items'
+import { addDays, daysBetween } from './dateMath'
 
 const asStr = (v: unknown): string => (typeof v === 'string' ? v : '')
 
@@ -83,8 +84,11 @@ export async function editCalendarValues(target: CalendarTarget, values: ReturnT
   const item = await resolveCalendarTarget(target)
   if (item.readOnly) throw new Error('This calendar item is read-only.')
   if (target.sourceId) {
-    if (values.endDate !== undefined || values.groupId !== undefined) throw new Error('This calendar source uses group names and single-day dates.')
-    if (!(await updateSourcedItem(target.sourceId, target.id, values))) throw new Error('Could not save the calendar source item.')
+    if (values.groupId !== undefined) throw new Error('This calendar source uses group names.')
+    const patch = item.sourced?.endDate && values.date !== undefined && values.endDate === undefined
+      ? { ...values, endDate: addDays(item.sourced.endDate, daysBetween(item.sourced.date, values.date)) }
+      : values
+    if (!(await updateSourcedItem(target.sourceId, target.id, patch))) throw new Error('Could not save the calendar source item.')
     return { value: await resolveCalendarTarget(target), revert: null }
   }
   const previous = item.event!
@@ -110,7 +114,7 @@ export function registerCalendarCommands(api: ValleyPluginApi): () => void {
   const offs = [
     api.commands.register({ id: 'list-items', label: 'Calendar: List all items', labelKey: 'calendar.command.listItems', paletteSafe: false, sideEffect: 'read', input: { schema: { type: 'object', properties: { from: eventText, to: eventText, sourceId: eventText }, additionalProperties: false }, parse: (raw) => { const input = (raw ?? {}) as Record<string, unknown>; for (const key of ['from', 'to', 'sourceId']) if (input[key] !== undefined && typeof input[key] !== 'string') throw new Error('Expected calendar filter text.'); return { from: asStr(input.from), to: asStr(input.to), sourceId: asStr(input.sourceId) } } }, run: async ({ from, to, sourceId }) => {
       const local = (await loadEvents()).map(eventToItem)
-      const contributed = (await listSourcedItems(true)).map(sourcedToItem)
+      const contributed = (await listSourcedItems(true, from || '0001-01-01', to || '9999-12-31')).map(sourcedToItem)
       const remote = getRemoteStore().getEvents().map(eventToItem)
       return [...local, ...contributed, ...remote].filter((item) => (!from || (item.endDate ?? item.date) >= from) && (!to || item.date <= to) && (!sourceId || item.sourceId === sourceId))
     } }),

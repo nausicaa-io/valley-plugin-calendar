@@ -6,6 +6,7 @@ import {
 import { loadEvents, onChanged } from './events'
 import { readCalendarSettings } from './settingsStore'
 import type { ValleyGroup } from '@valley/plugin-sdk/types'
+import { subscribeHostField } from './hooks'
 
 export function globalGroups(): ValleyGroup[] {
   return normalizeGroups(api.getState().groups)
@@ -21,11 +22,11 @@ export function startGroupUsageReporting(): () => void {
       const assigned = Object.values(readCalendarSettings().remoteCalendars).flatMap((calendars) =>
         Object.values(calendars).map((setting) => known.find((group) => group.id === setting.groupId)?.name))
       api.workspace.reportGroupUsage(countGroupUsage([...names, ...assigned]))
-    })
+    }).catch((error) => { if (!cancelled) console.error('[calendar] group usage read failed', error) })
   }
   push()
   const offEvents = onChanged(push)
-  const offState = api.subscribe(push)
+  const offState = subscribeHostField('groups', push)
   const offSettings = api.settings.subscribe(push)
   return () => {
     cancelled = true

@@ -314,5 +314,13 @@
   "backend.microsoft": "No se pudo obtener el calendario de Microsoft Graph: {{status}}",
   "backend.googleList": "No se pudo obtener la lista de Google Calendar: {{status}}",
   "backend.googleFetch": "No se pudo obtener Google Calendar: {{status}}",
-  "calendar.error.atomicLimit": "Este cambio supera el límite atómico de 1000 operaciones. Elimina menos fuentes a la vez."
+  "calendar.error.atomicLimit": "Este cambio supera el límite atómico de 1000 operaciones. Elimina menos fuentes a la vez.",
+  "calendar.source.incompatible": "La fuente de calendario «{{owner}}» usa una versión incompatible. Actualízala para admitir consultas por fecha y por páginas (v2).",
+  "calendar.source.failed": "Fuente de calendario «{{owner}}»: {{message}}",
+  "calendar.source.pageRevision": "La fuente devolvió una revisión de página no válida o modificada.",
+  "calendar.source.rangeLimit": "El intervalo solicitado supera los {{limit}} elementos. Elige un intervalo menor.",
+  "calendar.source.invalidItems": "La fuente devolvió elementos duplicados o fuera del intervalo.",
+  "calendar.source.cursor": "La fuente devolvió un cursor de página que no avanza.",
+  "calendar.source.pageBudget": "El intervalo solicitado supera el límite de páginas.",
+  "calendar.source.unavailable": "La fuente no está disponible."
 }

@@ -1,6 +1,6 @@
 import type { ValleyPluginManifest } from '@valley/plugin-sdk/types'
 import { describe, expect, it, vi } from 'vitest'
-import { CALENDAR_ITEM_SOURCE_V1, CALENDAR_NAVIGATOR_V1, CALENDAR_PANEL_SELECTION_V1 } from '@valley/plugin-sdk'
+import { CALENDAR_ITEM_SOURCE_V2, CALENDAR_NAVIGATOR_V1, CALENDAR_PANEL_SELECTION_V1 } from '@valley/plugin-sdk'
 import { createMockValleyApi } from '@valley/plugin-testkit'
 import calendarPlugin from '../src/index'
 import { revealTargetStore } from '../src/runtime'
@@ -69,7 +69,7 @@ describe('optional calendar item sources', () => {
       manifest: calendarManifest
     })
     // Nothing provides `calendar.itemSource` — the Todo plugin is disabled.
-    expect(mock.api.interop.services.providers(CALENDAR_ITEM_SOURCE_V1)).toEqual([])
+    expect(mock.api.interop.services.providers(CALENDAR_ITEM_SOURCE_V2)).toEqual([])
 
     // Registering must still succeed: an unclaimed point is an empty list, not
     // an error, so Calendar keeps working with only its own events.

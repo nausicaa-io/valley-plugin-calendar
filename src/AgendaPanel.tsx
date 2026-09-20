@@ -50,7 +50,7 @@ export function AgendaPanel(): ReactElement {
   const todayKey = isoDay(today)
   const [tc, patch] = useTimeControl()
   useCalendarSurface('left_sidebar', tc)
-  const { items, sourceOptions, groupCounts, colorFor } = useCalendarItems()
+  const { items, sourceOptions, groupCounts, colorFor, sourceErrors } = useCalendarItems()
   const { groups: calendarGroups, hiddenGroups, hiddenSources } = useCalendarSettings()
   const bodyRef = React.useRef<HTMLDivElement>(null)
   const revealStore = revealTargetStore()
@@ -219,6 +219,7 @@ export function AgendaPanel(): ReactElement {
 
   return (
     <div className="panel calendar-agenda-panel">
+      {sourceErrors.map(error => <div key={error.owner} className="agenda-day-empty" role="status">{error.message}</div>)}
       <div className="panel-header">
         <span className="panel-title">{uiText('auto.891e9d6d47f1')}</span>
         <div className="agenda-header-actions">
@@ -326,7 +327,6 @@ export function AgendaPanel(): ReactElement {
         key={`${quickAdd.editItem?.sourceId ?? quickAdd.editItem?.kind}:${quickAdd.editItem?.id}`}
         state={quickAdd}
         groups={calendarGroups}
-        indexEntries={api.getState().indexEntries}
         onClose={() => setQuickAdd(null)}
         onAdded={() => setQuickAdd(null)}
       />}

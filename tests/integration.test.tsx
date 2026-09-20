@@ -9,12 +9,13 @@ import { paletteRef } from '@valley/plugin-sdk/palette'
 import {
   METADATA_PANEL_SEGMENT_V1,
   PLUGIN_SURFACE_V1,
-  CALENDAR_ITEM_SOURCE_V1,
+  CALENDAR_ITEM_SOURCE_V2,
   CALENDAR_PANEL_SELECTION_V1,
   type DatasetRecord,
   type CalendarRevealTarget
 } from '@valley/plugin-sdk'
 import { createMockValleyApi, type MockValleyApi } from '@valley/plugin-testkit'
+import { pagedSource } from './harness'
 import { initRuntime, revealTargetStore } from '../src/runtime'
 import { normalizeEventRecord, newEvent } from '../src/events'
 import { resolveItemColor } from '../src/colors'
@@ -97,6 +98,7 @@ function setupCalendarApi(opts: {
   const mock = createMockValleyApi({
     manifest: {
       id: 'calendar',
+      indexState: 'scoped',
       noteDocuments: CALENDAR_PLUGIN_CONFIG.noteDocuments,
       datasets: CALENDAR_PLUGIN_CONFIG.datasets as unknown as ValleyPluginManifest['datasets']
     },
@@ -105,14 +107,14 @@ function setupCalendarApi(opts: {
     groups: opts.groups ?? [],
     settings: opts.settings ?? {}
   })
-  mock.provideInterop(CALENDAR_ITEM_SOURCE_V1, {
+  mock.provideInterop(CALENDAR_ITEM_SOURCE_V2, {
     integration: {
       name: 'To-Do',
       version: '2.0.0',
       author: 'Cedar Lab',
       description: 'Structured task manager.'
     },
-    list: async () => sourceItems,
+    list: pagedSource(async () => sourceItems),
     create: async () => true,
     update: async () => true,
     remove: async () => true,
@@ -178,12 +180,12 @@ describe('shared Calendar documents', () => {
   it('delegates an existing contributed composer request without opening a cross-owner draft', async () => {
     const ownerEdit = vi.fn()
     const mock = setupCalendarApi({ providerEdit: ownerEdit })
-    const [provider] = mock.api.interop.services.providers(CALENDAR_ITEM_SOURCE_V1)
+    const [provider] = mock.api.interop.services.providers(CALENDAR_ITEM_SOURCE_V2)
     const close = vi.fn()
     const read = vi.spyOn(mock.api.documents, 'read')
     const item = sourcedToItem({ sourceId: provider.providerId, sourceOwner: 'todo', labelKey: 'plugin.todo.name', editable: true,
       item: { id: 'owned-task', title: 'Ferns', date: '2026-06-08', documentRef: { pluginId: 'todo', sourceId: 'tasks', itemId: 'owned-task' } } })
-    render(React.createElement(QuickAdd, { state: { date: item.date, editItem: item }, groups: [], indexEntries: [], onClose: close, onAdded: vi.fn() }))
+    render(React.createElement(QuickAdd, { state: { date: item.date, editItem: item }, groups: [], onClose: close, onAdded: vi.fn() }))
     await waitFor(() => expect(close).toHaveBeenCalledTimes(1))
     expect(ownerEdit).toHaveBeenCalledWith('owned-task')
     expect(read).not.toHaveBeenCalled()
@@ -195,7 +197,7 @@ describe('shared Calendar documents', () => {
     const close = vi.fn()
     const item = sourcedToItem({ sourceId: 'disabled-provider', sourceOwner: 'other', labelKey: 'plugin.other.name', editable: true,
       item: { id: 'missing-task', title: 'Ferns', date: '2026-06-08' } })
-    render(React.createElement(QuickAdd, { state: { date: item.date, editItem: item }, groups: [], indexEntries: [], onClose: close, onAdded: vi.fn() }))
+    render(React.createElement(QuickAdd, { state: { date: item.date, editItem: item }, groups: [], onClose: close, onAdded: vi.fn() }))
     await waitFor(() => expect(mock.api.ui.confirm).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Item editor unavailable', message: expect.stringContaining('owning plugin')
     })))
@@ -212,7 +214,7 @@ describe('shared Calendar documents', () => {
     const NoteInput = mock.api.ui.NoteInput
     mock.api.ui.NoteInput = (props) => { contexts.push(props.context); return React.createElement(NoteInput, props) }
     const close = vi.fn()
-    render(React.createElement(QuickAdd, { state: { date: event.date, editItem: eventToItem(event) }, groups: [], indexEntries: [], onClose: close, onAdded: vi.fn() }))
+    render(React.createElement(QuickAdd, { state: { date: event.date, editItem: eventToItem(event) }, groups: [], onClose: close, onAdded: vi.fn() }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled())
     expect(contexts.at(-1)).toEqual({ ref: { pluginId: 'calendar', sourceId: 'events', itemId: event.id }, sourcePath: event.filePath })
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: '**Changed** [[Ferns]] #wald' } })
@@ -231,7 +233,7 @@ describe('shared Calendar documents', () => {
     const mock = setupCalendarApi({ events: [event as unknown as DataRecord] })
     mock.api.documents.update = vi.fn(async () => { throw new Error('Stale revision') })
     const close = vi.fn()
-    const mounted = render(React.createElement(QuickAdd, { state: { date: event.date, editItem: eventToItem(event) }, groups: [], indexEntries: [], onClose: close, onAdded: vi.fn() }))
+    const mounted = render(React.createElement(QuickAdd, { state: { date: event.date, editItem: eventToItem(event) }, groups: [], onClose: close, onAdded: vi.fn() }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled())
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Unsaved' } })
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })) })
@@ -239,7 +241,7 @@ describe('shared Calendar documents', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument()
     expect(close).not.toHaveBeenCalled()
     mounted.unmount()
-    render(React.createElement(QuickAdd, { state: { date: event.date, editItem: { ...eventToItem(event), id: 'cached-event', readOnly: true } }, groups: [], indexEntries: [], onClose: close, onAdded: vi.fn() }))
+    render(React.createElement(QuickAdd, { state: { date: event.date, editItem: { ...eventToItem(event), id: 'cached-event', readOnly: true } }, groups: [], onClose: close, onAdded: vi.fn() }))
     expect(screen.getByLabelText('Note')).toHaveAttribute('readonly')
     expect(screen.getByLabelText('Title')).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
@@ -250,7 +252,7 @@ describe('shared Calendar documents', () => {
     const mock = setupCalendarApi({ events: [event as unknown as DataRecord] })
     const close = vi.fn()
     const clear = vi.spyOn(mock.api.documents.drafts, 'clear')
-    render(React.createElement(QuickAdd, { state: { date: event.date, editItem: eventToItem(event) }, groups: [], indexEntries: [], onClose: close, onAdded: vi.fn() }))
+    render(React.createElement(QuickAdd, { state: { date: event.date, editItem: eventToItem(event) }, groups: [], onClose: close, onAdded: vi.fn() }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled())
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Local unsaved Markdown' } })
     await mock.api.data.dataset('calendar.event_tags').insert({ eventId: event.id, tag: 'external' })
@@ -681,8 +683,8 @@ describe('Calendar shell chrome', () => {
     const birthdays = await screen.findByRole('switch', { name: 'Birthdays' })
     const deadlines = screen.getByRole('switch', { name: 'Deadlines' })
     expect(birthdays).toBeChecked()
-    expect(deadlines).not.toBeChecked()
-    expect([...container.querySelectorAll('.calendar-filter-option-count')].map((node) => node.textContent)).toEqual(['1', '1'])
+    await waitFor(() => expect(deadlines).not.toBeChecked())
+    await waitFor(() => expect([...container.querySelectorAll('.calendar-filter-option-count')].map((node) => node.textContent)).toEqual(['1', '1']))
 
     await act(async () => fireEvent.click(deadlines))
     await waitFor(() => expect(mock.datasets.get('calendar.note_date_sources')?.find((row) => row.id === 'deadlines')?.definition).toMatchObject({ visible: true }))
@@ -1005,7 +1007,7 @@ describe('Calendar item clicks', () => {
   it('flashes the exact timed and all-day contributed items', async () => {
     const { container } = render(React.createElement(Calendar))
     await screen.findByRole('heading', { name: /W24\s+2026/i })
-    const sourceId = mock.api.interop.services.providers(CALENDAR_ITEM_SOURCE_V1)[0].providerId
+    const sourceId = mock.api.interop.services.providers(CALENDAR_ITEM_SOURCE_V2)[0].providerId
 
     const reveal = (itemId: string, nonce: number): void => {
       const target: CalendarRevealTarget = {
@@ -2032,22 +2034,23 @@ describe('Calendar plugin integrations section', () => {
     const mock = createMockValleyApi({
       manifest: {
         id: 'calendar',
+      indexState: 'scoped',
         datasets: CALENDAR_PLUGIN_CONFIG.datasets as unknown as ValleyPluginManifest['datasets']
       }
     })
     const subscribe = mock.api.interop.services.subscribe
     let registered = false
     mock.api.interop.services.subscribe = vi.fn((contract, listener) => {
-      if (contract.id === CALENDAR_ITEM_SOURCE_V1.id && !registered) {
+      if (contract.id === CALENDAR_ITEM_SOURCE_V2.id && !registered) {
         registered = true
-        mock.provideInterop(CALENDAR_ITEM_SOURCE_V1, {
+        mock.provideInterop(CALENDAR_ITEM_SOURCE_V2, {
           integration: {
             name: 'To-Do',
             version: '2.0.0',
             author: 'Cedar Lab',
             description: 'Structured task manager.'
           },
-          list: async () => []
+          list: pagedSource(async () => [])
         }, 'todo')
       }
       return subscribe(contract, listener)

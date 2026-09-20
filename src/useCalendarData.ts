@@ -1,7 +1,7 @@
-import { React, api } from './runtime'
+import { React } from './runtime'
 import type { EventRecord } from '@valley/plugin-sdk/types'
 import { loadEvents, onChanged as onEventsChanged } from './events'
-import { useSourcedItems, type SourcedItem } from './itemSources'
+import { useSourcedItems, type SourcedItem, type CalendarSourceError } from './itemSources'
 import { getRemoteStore } from './remoteSync'
 import { createReloadQueue } from './reloadQueue'
 
@@ -15,10 +15,11 @@ import { createReloadQueue } from './reloadQueue'
 export function useCalendarData(startDate: string, endDate: string): {
   sourced: SourcedItem[]
   events: EventRecord[]
+  sourceErrors: CalendarSourceError[]
   reload: () => void
 } {
   const [localEvents, setLocalEvents] = React.useState<EventRecord[]>([])
-  const { items: sourced, reload: reloadSourced } = useSourcedItems()
+  const { items: sourced, errors: sourceErrors, reload: reloadSourced } = useSourcedItems(startDate, endDate)
   const remoteStore = getRemoteStore()
   const remoteEvents = React.useSyncExternalStore(remoteStore.subscribe, remoteStore.getEvents)
   const localQueue = React.useRef<ReturnType<typeof createReloadQueue<EventRecord[]>> | null>(null)
@@ -30,15 +31,13 @@ export function useCalendarData(startDate: string, endDate: string): {
     const current = createReloadQueue(() => loadEvents(startDate, endDate), setLocalEvents, (error) => console.error('[calendar] events reload failed', error))
     localQueue.current = current
     void current.reload()
-    const offEvents = onEventsChanged(reload)
-    const offVault = api.subscribe(reload)
+    const offEvents = onEventsChanged(() => { void current.reload() })
     return () => {
       current.dispose()
       if (localQueue.current === current) localQueue.current = null
       offEvents()
-      offVault()
     }
   }, [endDate, reload, startDate])
   const events = React.useMemo(() => [...localEvents, ...remoteEvents], [localEvents, remoteEvents])
-  return { sourced, events, reload }
+  return { sourced, events, sourceErrors, reload }
 }

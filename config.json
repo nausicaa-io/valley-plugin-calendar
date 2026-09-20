@@ -567,7 +567,7 @@
     {
       "id": "calendar.itemSource",
       "kind": "service",
-      "range": "^1.0.0",
+      "range": "^1.0.0 || ^2.0.0",
       "optional": true
     },
     {
@@ -718,5 +718,6 @@
     "accounts": [
       "calendar"
     ]
-  }
+  },
+  "indexState": "scoped"
 }

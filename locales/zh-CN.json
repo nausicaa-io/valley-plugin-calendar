@@ -314,5 +314,13 @@
   "backend.microsoft": "Microsoft Graph 日历获取失败：{{status}}",
   "backend.googleList": "Google 日历列表获取失败：{{status}}",
   "backend.googleFetch": "Google 日历获取失败：{{status}}",
-  "calendar.error.atomicLimit": "此更改超出了 1000 次操作的原子限制。请一次删除较少的来源。"
+  "calendar.error.atomicLimit": "此更改超出了 1000 次操作的原子限制。请一次删除较少的来源。",
+  "calendar.source.incompatible": "日历来源“{{owner}}”使用不兼容的版本。请更新以支持按日期分页查询（v2）。",
+  "calendar.source.failed": "日历来源“{{owner}}”：{{message}}",
+  "calendar.source.pageRevision": "来源返回了无效或已更改的页面版本。",
+  "calendar.source.rangeLimit": "请求的日期范围超过 {{limit}} 个项目。请选择更小的范围。",
+  "calendar.source.invalidItems": "来源返回了重复或超出日期范围的项目。",
+  "calendar.source.cursor": "来源返回的分页游标未向前推进。",
+  "calendar.source.pageBudget": "请求的日期范围超出了页面数量限制。",
+  "calendar.source.unavailable": "来源不可用。"
 }

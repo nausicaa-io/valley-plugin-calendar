@@ -1,4 +1,6 @@
 import type { IndexEntry } from '@valley/plugin-sdk/types'
+
+export type NoteDateIndexEntry = Pick<IndexEntry, 'relPath' | 'title' | 'kind' | 'excluded' | 'frontmatter'>
 import { asBool, asString, asTime } from '@valley/plugin-sdk/normalize'
 import { nextPaletteColor } from '@valley/plugin-sdk/palette'
 import { daysInMonth, isRealCalendarDate, parseDateByPattern } from '@valley/plugin-sdk/datePattern'
@@ -273,11 +275,11 @@ export function isSourceActive(source: NoteDateSource): boolean {
  * Every non-excluded note matching a source's frontmatter predicate (and its
  * optional folder scope). Reads the pre-parsed index — no file I/O.
  */
-export function matchNotes(entries: IndexEntry[], source: NoteDateSource): IndexEntry[] {
+export function matchNotes(entries: readonly NoteDateIndexEntry[], source: NoteDateSource): NoteDateIndexEntry[] {
   if (!isSourceActive(source)) return []
   const key = source.matchKey
   const want = source.matchValue.trim().toLowerCase()
-  const out: IndexEntry[] = []
+  const out: NoteDateIndexEntry[] = []
   for (const entry of entries) {
     if (entry.excluded || entry.kind !== 'note') continue
     if (!underFolder(entry.relPath, source.folder)) continue
@@ -301,7 +303,7 @@ export interface SourceMatchStats {
  * `dateField` otherwise fails in complete silence — this is what the Note dates
  * settings row reports so a rule that finds nothing says so.
  */
-export function sourceMatchStats(entries: IndexEntry[], source: NoteDateSource): SourceMatchStats {
+export function sourceMatchStats(entries: readonly NoteDateIndexEntry[], source: NoteDateSource): SourceMatchStats {
   const notes = matchNotes(entries, source)
   let dated = 0
   for (const entry of notes) {
@@ -418,7 +420,7 @@ export function showFieldsFor(
 }
 
 /** The entry's title: the `labelField` value in 'property' mode, else the note title. */
-export function noteDateTitle(entry: IndexEntry, source: NoteDateSource): string {
+export function noteDateTitle(entry: NoteDateIndexEntry, source: NoteDateSource): string {
   if (source.labelMode === 'property' && source.labelField) {
     const value = toDisplay(entry.frontmatter?.[source.labelField])
     if (value) return value
@@ -432,7 +434,7 @@ export function noteDateTitle(entry: IndexEntry, source: NoteDateSource): string
  * no year — there is nothing to place it in.
  */
 export function buildSourceEntries(
-  entries: IndexEntry[],
+  entries: readonly NoteDateIndexEntry[],
   source: NoteDateSource,
   years: number[],
   viewedYear: number
@@ -482,7 +484,7 @@ export function buildSourceEntries(
 
 /** Every entry across all sources, in source order. */
 export function buildNoteDates(
-  entries: IndexEntry[],
+  entries: readonly NoteDateIndexEntry[],
   sources: NoteDateSource[],
   years: number[],
   viewedYear: number
@@ -496,28 +498,23 @@ export function buildNoteDates(
  * broadcast can reuse the previous entries. The years window is deliberately
  * absent — it is a render input, not an index fact.
  */
-export function noteDatesSignature(entries: IndexEntry[], sources: NoteDateSource[]): string {
-  const parts: string[] = []
+export function noteDatesSignature(entries: readonly NoteDateIndexEntry[], sources: NoteDateSource[]): string {
+  const parts: unknown[] = []
   for (const source of sources) {
     parts.push(
-      `#${source.id}:${source.visible ? 1 : 0}:${source.hidden ? 1 : 0}:${source.color ?? ''}:` +
-        `${source.borderColor ?? ''}:${source.icon ?? ''}:${source.matchKey}=${source.matchValue}:` +
-        `${source.folder ?? ''}:${source.dateField}:${source.dateFormat ?? ''}:` +
-        `${source.startTimeField ?? ''}:${source.endTimeField ?? ''}:` +
-        `${source.match}:${source.recurrenceLimitYears ?? ''}:${source.showCount ? 1 : 0}:${source.labelMode}:${source.labelField ?? ''}:` +
-        `${source.showFields.join(',')}`
+      JSON.stringify(source)
     )
     for (const entry of matchNotes(entries, source)) {
       const fm = entry.frontmatter
       parts.push(
         entry.relPath,
-        toDisplay(fm?.[source.dateField]),
-        source.startTimeField ? toDisplay(fm?.[source.startTimeField]) : '',
-        source.endTimeField ? toDisplay(fm?.[source.endTimeField]) : '',
+        parseNoteDate(fm?.[source.dateField], source.dateFormat),
+        source.startTimeField ? asTime(fm?.[source.startTimeField]) : null,
+        source.endTimeField ? asTime(fm?.[source.endTimeField]) : null,
         noteDateTitle(entry, source)
       )
       for (const key of source.showFields) parts.push(toDisplay(fm?.[key]))
     }
   }
-  return parts.join('')
+  return JSON.stringify(parts)
 }

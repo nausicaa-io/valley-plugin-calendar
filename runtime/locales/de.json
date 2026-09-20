@@ -314,5 +314,13 @@
   "backend.microsoft": "Microsoft-Graph-Kalender konnte nicht geladen werden: {{status}}",
   "backend.googleList": "Google-Kalenderliste konnte nicht geladen werden: {{status}}",
   "backend.googleFetch": "Google-Kalender konnte nicht geladen werden: {{status}}",
-  "calendar.error.atomicLimit": "Diese Änderung überschreitet das atomare Limit von 1000 Vorgängen. Entferne weniger Quellen auf einmal."
+  "calendar.error.atomicLimit": "Diese Änderung überschreitet das atomare Limit von 1000 Vorgängen. Entferne weniger Quellen auf einmal.",
+  "calendar.source.incompatible": "Die Kalenderquelle „{{owner}}“ verwendet eine inkompatible Version. Aktualisiere sie für datumsbezogene, seitenweise Abfragen (v2).",
+  "calendar.source.failed": "Kalenderquelle „{{owner}}“: {{message}}",
+  "calendar.source.pageRevision": "Die Quelle hat eine ungültige oder geänderte Seitenrevision zurückgegeben.",
+  "calendar.source.rangeLimit": "Der angeforderte Zeitraum umfasst mehr als {{limit}} Einträge. Wähle einen kleineren Zeitraum.",
+  "calendar.source.invalidItems": "Die Quelle hat doppelte Einträge oder Einträge außerhalb des Zeitraums zurückgegeben.",
+  "calendar.source.cursor": "Die Quelle hat einen Seitencursor zurückgegeben, der nicht weiterführt.",
+  "calendar.source.pageBudget": "Der angeforderte Zeitraum überschreitet die zulässige Seitenanzahl.",
+  "calendar.source.unavailable": "Die Quelle ist nicht verfügbar."
 }

@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react'
 import * as React from 'react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { IndexEntry } from '@valley/plugin-sdk/types'
 import { createMockValleyApi } from './harness'
 import { initRuntime } from '../src/runtime'
@@ -37,7 +37,7 @@ const BIRTHDAYS_SOURCE = {
 
 async function renderSection(
   options: { noteDateSources?: Record<string, unknown>[]; indexEntries?: IndexEntry[] } = {}
-): Promise<void> {
+): Promise<ReturnType<typeof createMockValleyApi>> {
   const mock = createMockValleyApi({
     manifest: { id: 'calendar' },
     indexEntries: options.indexEntries,
@@ -53,9 +53,30 @@ async function renderSection(
   initRuntime(mock.api)
   render(React.createElement(NoteDatesSection))
   await waitFor(() => expect(document.querySelector('.notedate-source-row')).not.toBeNull())
+  return mock
 }
 
 describe('Calendar note-date source editor', () => {
+  it.each([false, true])('persists JSON-safe source definitions when title focus ends (edited: %s)', async (edited) => {
+    const mock = await renderSection({ noteDateSources: [BIRTHDAYS_SOURCE] })
+    const dataset = mock.api.data.dataset
+    const batch = vi.fn()
+    mock.api.data.dataset = ((id: string) => {
+      const handle = dataset(id)
+      return { ...handle, batch: async (operations) => { batch(operations); return handle.batch(operations) } }
+    }) as typeof dataset
+    const title = document.querySelector<HTMLInputElement>('.notedate-source-title')!
+    fireEvent.focus(title)
+    if (edited) fireEvent.change(title, { target: { value: 'Field dates' } })
+    fireEvent.blur(title)
+    await waitFor(() => expect(batch).toHaveBeenCalledTimes(1))
+    const operations = batch.mock.calls[0][0]
+    expect(operations).toStrictEqual(JSON.parse(JSON.stringify(operations)))
+    expect(mock.datasets.get('calendar.note_date_sources')?.[0]?.definition).toMatchObject({
+      title: edited ? 'Field dates' : 'Birthdays', visible: true, hidden: false, showFields: []
+    })
+  })
+
   it('draws its colours with the same kit chips, in the same order, as the Map pin editor', async () => {
     await renderSection({ noteDateSources: [BIRTHDAYS_SOURCE] })
 

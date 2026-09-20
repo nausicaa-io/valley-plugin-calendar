@@ -1,10 +1,11 @@
 import { uiText } from './localization'
 import type { DataRecord, EventRecord } from '@valley/plugin-sdk/types'
-import type { DatasetRecord, DatasetTransactionOperation, DatasetWhere, NoteInputProps } from '@valley/plugin-sdk'
+import type { DatasetRecord, DatasetTransactionOperation, DatasetWhere, NoteInputProps, ValleyPluginApi } from '@valley/plugin-sdk'
 import { asColor, asString, asTime } from '@valley/plugin-sdk/normalize'
 import { isAllowedExternalUrl, normalizeRelPathOpt, parseAppOpenUrl } from '@valley/plugin-sdk/paths'
-import { api } from './runtime'
+import { api, readOwner } from './runtime'
 import { generateId } from './lib'
+import { createRevisionCache, subscribeDatasetRevisions } from './reloadQueue'
 
 /**
  * Calendar events data layer. Local records live in Calendar's durable database,
@@ -18,9 +19,18 @@ const LINKS_DATASET = 'calendar.event_links'
 const ATTACHMENTS_DATASET = 'calendar.event_attachments'
 
 export function onChanged(cb: () => void): () => void {
-  const off = [EVENTS_DATASET, TAGS_DATASET, LINKS_DATASET, ATTACHMENTS_DATASET]
-    .map((dataset) => api.data.dataset(dataset).subscribe(cb))
-  return () => off.forEach((dispose) => dispose())
+  return eventReads().subscribe(cb)
+}
+
+function eventReads() {
+  return readOwner('events', (owner) => {
+    const cache = createRevisionCache((key: string, assertCurrent) => {
+      const [start, end] = JSON.parse(key) as [string | null, string | null]
+      return readEvents(owner, assertCurrent, start ?? undefined, end ?? undefined)
+    })
+    const off = subscribeDatasetRevisions(owner, [EVENTS_DATASET, TAGS_DATASET, LINKS_DATASET, ATTACHMENTS_DATASET], cache.invalidate)
+    return { ...cache, dispose: () => { off(); cache.dispose() } }
+  })
 }
 
 function asBool(value: unknown): boolean {
@@ -146,35 +156,41 @@ function eventRow(record: EventRecord): DatasetRecord {
   }
 }
 
-async function allRows(dataset: string, where?: DatasetWhere): Promise<DatasetRecord[]> {
+async function allRows(dataset: string, where?: DatasetWhere, owner = api, assertCurrent = (): void => {}): Promise<DatasetRecord[]> {
   const rows: DatasetRecord[] = []
   let cursor: string | undefined
   do {
-    const page = await api.data.dataset(dataset).query({ where, limit: 1000, cursor })
+    assertCurrent()
+    const page = await owner.data.dataset(dataset).query({ where, limit: 1000, cursor })
+    assertCurrent()
     rows.push(...page.rows)
     cursor = page.cursor
   } while (cursor)
   return rows
 }
 
-async function eventRelations(eventIds?: string[], includeTags = true): Promise<{
+async function eventRelations(eventIds?: string[], includeTags = true, owner = api, assertCurrent = (): void => {}): Promise<{
   tags: DatasetRecord[]
   links: DatasetRecord[]
   attachments: DatasetRecord[]
 }> {
   const read = async (dataset: string): Promise<DatasetRecord[]> => {
-    if (!eventIds) return allRows(dataset)
+    if (!eventIds) return allRows(dataset, undefined, owner, assertCurrent)
     const rows: DatasetRecord[] = []
     for (let offset = 0; offset < eventIds.length; offset += 100) {
-      rows.push(...await allRows(dataset, { eventId: { in: eventIds.slice(offset, offset + 100) } }))
+      rows.push(...await allRows(dataset, { eventId: { in: eventIds.slice(offset, offset + 100) } }, owner, assertCurrent))
     }
     return rows
   }
-  const [tags, links, attachments] = await Promise.all([
+  const results = await Promise.allSettled([
     includeTags ? read(TAGS_DATASET) : [],
     read(LINKS_DATASET),
     read(ATTACHMENTS_DATASET)
   ])
+  const [tags, links, attachments] = results.map((result) => {
+    if (result.status === 'rejected') throw result.reason
+    return result.value
+  })
   return { tags, links, attachments }
 }
 
@@ -197,23 +213,16 @@ function forWrite(record: EventRecord): EventRecord {
 }
 
 export function loadEvents(startDate?: string, endDate?: string): Promise<EventRecord[]> {
-  const reads = api.runtime.getOrCreate('calendar.eventReads', () => new Map<string, Promise<EventRecord[]>>())
-  const key = JSON.stringify([startDate ?? null, endDate ?? null])
-  let pending = reads.get(key)
-  if (!pending) {
-    pending = readEvents(startDate, endDate).finally(() => { reads.delete(key) })
-    reads.set(key, pending)
-  }
-  return pending
+  return eventReads().read(JSON.stringify([startDate ?? null, endDate ?? null]))
 }
 
-async function readEvents(startDate?: string, endDate?: string): Promise<EventRecord[]> {
+async function readEvents(owner: ValleyPluginApi, assertCurrent: () => void, startDate?: string, endDate?: string): Promise<EventRecord[]> {
   const where: DatasetWhere | undefined = startDate && endDate
     ? { date: { lte: endDate }, or: [{ endDate: { gte: startDate } }, { endDate: { isNull: true }, date: { gte: startDate } }] }
     : undefined
-  const raw = await allRows(EVENTS_DATASET, where)
+  const raw = await allRows(EVENTS_DATASET, where, owner, assertCurrent)
   if (!raw.length) return []
-  const relations = await eventRelations(where ? raw.map((row) => String(row.id)) : undefined)
+  const relations = await eventRelations(where ? raw.map((row) => String(row.id)) : undefined, true, owner, assertCurrent)
   const byEvent = (rows: DatasetRecord[], ordered = false): Map<unknown, DatasetRecord[]> => {
     const index = new Map<unknown, DatasetRecord[]>()
     for (const row of rows) {

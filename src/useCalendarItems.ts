@@ -1,19 +1,18 @@
 import { React, api } from './runtime'
 import type { EventRecord, ValleyGroup } from '@valley/plugin-sdk/types'
 import { groupForName } from '@valley/plugin-sdk/groups'
-import { useHostState } from './hooks'
+import { useCalendarYear } from './hooks'
+import { useNoteIndex } from './noteIndex'
 import { useCalendarSettings } from './settingsStore'
 import { useCalendarData } from './useCalendarData'
 import { daysInRange } from './dateMath'
-import { useNoteDateSources } from './noteDateStore'
+import { projectNoteDates, useNoteDateSources } from './noteDateStore'
 import {
   activeYears,
-  buildNoteDates,
-  noteDatesSignature,
   type NoteDateEntry
 } from './noteDates'
 import { eventToItem, noteDateToItem, sourcedToItem, type CalItem } from './items'
-import { useCalendarSourceProviders, type SourcedItem } from './itemSources'
+import { useCalendarSourceProviders, type SourcedItem, type CalendarSourceError } from './itemSources'
 import { visibleItems, type ItemSourceOption } from './filters'
 import { EVENTS_SOURCE_ID, NOTE_DATES_SOURCE_ID } from './settingsStore'
 import { resolveItemColor } from './colors'
@@ -23,6 +22,7 @@ export interface CalendarItems {
   /** Items contributed by other plugins through `calendar.itemSource`. */
   sourced: SourcedItem[]
   events: EventRecord[]
+  sourceErrors: CalendarSourceError[]
   /** Every dated thing: contributed items, events and note-scraped dates. */
   items: CalItem[]
   itemsByDay: Map<string, CalItem[]>
@@ -52,9 +52,9 @@ export function calendarItemColor(item: CalItem, groups: readonly ValleyGroup[])
  * materialized only in the day map would be invisible there. Every copy keeps
  * the record's `id` and its `endDate`; only `date` and `occurrenceKey` differ.
  */
-function expandSpan(item: CalItem): CalItem[] {
+function expandSpan(item: CalItem, startDate: string, endDate: string): CalItem[] {
   if (!item.endDate) return [item]
-  return daysInRange(item.date, item.endDate).map((day) => ({
+  return daysInRange(item.date < startDate ? startDate : item.date, item.endDate > endDate ? endDate : item.endDate).map((day) => ({
     ...item,
     date: day,
     occurrenceKey: `${item.id}@${day}`
@@ -99,32 +99,19 @@ export function deduplicateCalendarItems(items: readonly CalItem[]): CalItem[] {
  */
 export function useCalendarItems(opts: { focusYear?: number } = {}): CalendarItems {
   const { focusYear } = opts
-  const { indexEntries } = useHostState()
+  const currentYear = useCalendarYear()
   const { groups: calendarGroups, hiddenGroups, hiddenSources } = useCalendarSettings()
   const providers = useCalendarSourceProviders()
   const sources = useNoteDateSources()
+  const indexEntries = useNoteIndex(sources)
 
   const years = React.useMemo(
-    () => activeYears(new Date(), focusYear),
-    [focusYear]
+    () => activeYears(new Date(currentYear, 0, 1), focusYear),
+    [currentYear, focusYear]
   )
-  const { sourced, events } = useCalendarData(`${years[0]}-01-01`, `${years.at(-1)}-12-31`)
+  const { sourced, events, sourceErrors } = useCalendarData(`${years[0]}-01-01`, `${years.at(-1)}-12-31`)
 
-  const cached = React.useRef<{ signature: string; years: string; entries: NoteDateEntry[] }>({
-    signature: '',
-    years: '',
-    entries: []
-  })
-  const noteDates = React.useMemo(() => {
-    const signature = noteDatesSignature(indexEntries, sources)
-    const viewedYear = focusYear ?? new Date().getFullYear()
-    const yearKey = `${viewedYear}:${years.join(',')}`
-    const prev = cached.current
-    if (prev.years === yearKey && prev.signature === signature) return prev.entries
-    const entries = buildNoteDates(indexEntries, sources, years, viewedYear)
-    cached.current = { signature, years: yearKey, entries }
-    return entries
-  }, [focusYear, indexEntries, sources, years])
+  const noteDates = React.useMemo(() => projectNoteDates(indexEntries, sources, years, focusYear ?? currentYear), [currentYear, focusYear, indexEntries, sources, years])
 
   const baseItems = React.useMemo<CalItem[]>(() => [
     ...sourced.map(sourcedToItem),
@@ -134,11 +121,11 @@ export function useCalendarItems(opts: { focusYear?: number } = {}): CalendarIte
 
   const items = React.useMemo<CalItem[]>(() => {
     const out: CalItem[] = []
-    for (const item of baseItems) out.push(...(item.kind === 'event' ? expandSpan(item) : [item]))
+    for (const item of baseItems) out.push(...(item.kind === 'event' || item.kind === 'sourced' ? expandSpan(item, `${years[0]}-01-01`, `${years.at(-1)}-12-31`) : [item]))
     // One filter pass for every surface: the Calendar page and the Agenda panel
     // must never disagree about what the user switched off.
     return deduplicateCalendarItems(visibleItems(out, calendarGroups, hiddenGroups, hiddenSources))
-  }, [baseItems, calendarGroups, hiddenGroups, hiddenSources])
+  }, [baseItems, calendarGroups, hiddenGroups, hiddenSources, years])
 
   /**
    * What is on offer, whether or not it is currently switched on — a filter that
@@ -192,5 +179,5 @@ export function useCalendarItems(opts: { focusYear?: number } = {}): CalendarIte
     return map
   }, [items])
 
-  return { sourced, events, items, itemsByDay, noteDates, sourceOptions, groupCounts, colorFor }
+  return { sourced, events, sourceErrors, items, itemsByDay, noteDates, sourceOptions, groupCounts, colorFor }
 }

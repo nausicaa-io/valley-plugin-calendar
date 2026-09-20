@@ -314,5 +314,13 @@
   "backend.microsoft": "Échec du chargement du calendrier Microsoft Graph : {{status}}",
   "backend.googleList": "Échec du chargement de la liste Google Agenda : {{status}}",
   "backend.googleFetch": "Échec du chargement de Google Agenda : {{status}}",
-  "calendar.error.atomicLimit": "Cette modification dépasse la limite atomique de 1000 opérations. Supprimez moins de sources à la fois."
+  "calendar.error.atomicLimit": "Cette modification dépasse la limite atomique de 1000 opérations. Supprimez moins de sources à la fois.",
+  "calendar.source.incompatible": "La source de calendrier « {{owner}} » utilise une version incompatible. Mettez-la à jour pour les requêtes datées et paginées (v2).",
+  "calendar.source.failed": "Source de calendrier « {{owner}} » : {{message}}",
+  "calendar.source.pageRevision": "La source a renvoyé une révision de page invalide ou modifiée.",
+  "calendar.source.rangeLimit": "La période demandée dépasse {{limit}} éléments. Choisissez une période plus courte.",
+  "calendar.source.invalidItems": "La source a renvoyé des éléments en double ou hors de la période.",
+  "calendar.source.cursor": "La source a renvoyé un curseur de page qui ne progresse pas.",
+  "calendar.source.pageBudget": "La période demandée dépasse le nombre de pages autorisé.",
+  "calendar.source.unavailable": "La source est indisponible."
 }

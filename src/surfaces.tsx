@@ -1,5 +1,5 @@
 import { calendarServices } from './serviceClient'
-import { CALENDAR_ITEM_SOURCE_V1, METADATA_PANEL_SEGMENT_V1, PLUGIN_SURFACE_V1, type DatasetRecord, type MainWorkspaceNavigationController, type PluginProperty, type PluginSurfaceSnapshot, type ValleyPluginApi } from '@valley/plugin-sdk'
+import { CALENDAR_ITEM_SOURCE_V2, METADATA_PANEL_SEGMENT_V1, PLUGIN_SURFACE_V1, type DatasetRecord, type MainWorkspaceNavigationController, type PluginProperty, type PluginSurfaceSnapshot, type ValleyPluginApi } from '@valley/plugin-sdk'
 import type { SlotId, TimeControlState } from '@valley/plugin-sdk/types'
 import type { PluginLinkState } from '@valley/plugin-sdk/paths'
 import { React, api } from './runtime'
@@ -14,6 +14,7 @@ import { CalendarFilterList, NoteDateSourceFilterList } from './filters'
 import { loadNoteDateSources } from './noteDateStore'
 import { addDays, isoDay, isoWeek, localizedMonth, parseLocalDate, startOfWeek } from './dateMath'
 import { WEEK_START_INDEX } from './lib'
+import { subscribeHostField } from './hooks'
 
 interface CalendarSurfaces {
   time: TimeControlState
@@ -50,7 +51,7 @@ async function resolveItem(raw: PluginLinkState): Promise<CalItem | null> {
   if (typeof raw.itemId !== 'string') return null
   if (raw.kind === 'event' || raw.kind === 'sourced') {
     return resolveCalendarTarget({ id: raw.itemId, sourceId: raw.kind === 'sourced' && typeof raw.sourceId === 'string' ? raw.sourceId : undefined })
-  } else if (raw.kind === 'noteDate' && typeof raw.filePath === 'string' && api.getState().indexEntries.some((entry) => entry.relPath === raw.filePath)) {
+  } else if (raw.kind === 'noteDate' && typeof raw.filePath === 'string' && await api.documents.resolve(raw.filePath)) {
     return { kind: 'noteDate', id: raw.itemId, title: raw.filePath.split('/').pop() ?? raw.filePath, date: String(raw.date ?? ''), filePath: raw.filePath, readOnly: true }
   }
   throw new Error('The bookmarked calendar item is unavailable.')
@@ -146,7 +147,7 @@ function Overview({ view, sources = false }: { view?: PluginLinkState; sources?:
       update()
       void contextProperties().then((fields) => { if (current === generation) { setDetails(fields); setError(false) } }).catch(() => { if (current === generation) setError(true) })
     }
-    const offs = [subscribe(update), api.subscribe(refresh), api.settings.subscribe(refresh), api.data.dataset('calendar.calendars').subscribe(refresh), api.interop.services.subscribe(CALENDAR_ITEM_SOURCE_V1, refresh)]
+    const offs = [subscribe(update), subscribeHostField('vault', refresh), api.settings.subscribe(refresh), api.data.dataset('calendar.calendars').subscribe(refresh), api.interop.services.subscribe(CALENDAR_ITEM_SOURCE_V2, refresh)]
     refresh()
     return () => { generation++; offs.forEach((off) => off()) }
   }, [sources])

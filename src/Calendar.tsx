@@ -7,7 +7,7 @@ import {
   type CalendarRevealTarget,
   type UiMenuItem
 } from '@valley/plugin-sdk'
-import { useHostState } from './hooks'
+import { useHostField } from './hooks'
 import { useCalendarSettings } from './settingsStore'
 import {
   useTimeControl,
@@ -102,7 +102,7 @@ export function Calendar({
   navigation?: MainWorkspaceNavigation
 }): ReactElement {
   const today = new Date()
-  const { weekStart: weekStartPref, indexEntries } = useHostState()
+  const weekStartPref = useHostField('weekStart')
   const {
     groups: calendarGroups,
     dayStartHour: calendarDayStartHour,
@@ -204,7 +204,7 @@ export function Calendar({
   const rootRef = React.useRef<HTMLDivElement>(null)
   const menuRequestRef = React.useRef(0)
 
-  const { items, itemsByDay, colorFor } = useCalendarItems({
+  const { items, itemsByDay, colorFor, sourceErrors } = useCalendarItems({
     focusYear: Number(cursor.slice(0, 4))
   })
 
@@ -560,6 +560,7 @@ export function Calendar({
           {navActions}
         </div>
       </div>
+      {sourceErrors.map(error => <div key={error.owner} className="agenda-day-empty" role="status">{error.message}</div>)}
       <div className="calendar-view-body">
         <div className="calendar-scroll-area" data-view={view}>
       <div className="calendar-stage" onWheel={onStageWheel} onMouseMove={handleStageMouseMove} onMouseLeave={() => { lastSwapRef.current = 0 }}>
@@ -651,7 +652,7 @@ export function Calendar({
           key={quickAdd.editItem?.id ?? `new:${quickAdd.kind ?? ''}:${quickAdd.date}:${quickAdd.startTime ?? ''}`}
           state={quickAdd}
           groups={calendarGroups}
-          indexEntries={indexEntries}
+
           onClose={() => setQuickAdd(null)}
           onAdded={() => { /* data hook reloads on change */ }}
         />

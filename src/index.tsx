@@ -33,9 +33,9 @@ import { startGroupUsageReporting } from './groups'
 import { calendarLinkPatch } from './timeControl'
 import { registerCalendarSurfaces } from './surfaces'
 
-export function register(api: ValleyPluginApi): () => void {
+export function register(api: ValleyPluginApi): () => Promise<void> {
   initLocalization(api)
-  initRuntime(api)
+  const disposeReads = initRuntime(api)
   const disposeStyles = injectStyles()
   const offLinks = api.workspace.onOpenOwnLink((state) => {
     const patch = calendarLinkPatch(state)
@@ -68,17 +68,19 @@ export function register(api: ValleyPluginApi): () => void {
   api.interop.state.publish(CALENDAR_PANEL_SELECTION_V1, null)
   reveals.publish(null)
 
-  return () => {
-    offCommands()
-    offSurfaces()
-    offAgentTools()
-    offFence()
-    offNavigator()
-    offGroupUsage()
-    offLinks()
-    disposeStyles()
-    api.interop.state.publish(CALENDAR_PANEL_SELECTION_V1, null)
-    reveals.publish(null)
+  return async () => {
+    try {
+      offCommands()
+      offSurfaces()
+      offAgentTools()
+      offFence()
+      offNavigator()
+      offGroupUsage()
+      offLinks()
+      disposeStyles()
+      api.interop.state.publish(CALENDAR_PANEL_SELECTION_V1, null)
+      reveals.publish(null)
+    } finally { await disposeReads() }
   }
 }
 

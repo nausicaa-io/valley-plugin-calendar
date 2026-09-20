@@ -1,6 +1,6 @@
 import { React, api } from './runtime'
 import type { ReactElement } from 'react'
-import type { EventRecord, IndexEntry } from '@valley/plugin-sdk/types'
+import type { EventRecord } from '@valley/plugin-sdk/types'
 import type {
   GeoNavigator,
   InteropServiceProvider,
@@ -24,7 +24,6 @@ export function FilePathInput({
 }: {
   value: string
   onChange: (v: string) => void
-  indexEntries: IndexEntry[]
   disabled?: boolean
   /** Two pickers on one form must not share an accessible name — pass both when
    *  the surface has more than one (a linked note beside an attachment). */

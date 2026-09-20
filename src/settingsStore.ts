@@ -2,6 +2,7 @@ import { React, api } from './runtime'
 import type { ValleyGroup, RemoteCalendar } from '@valley/plugin-sdk/types'
 import { normalizeGroups } from '@valley/plugin-sdk/groups'
 import { globalGroups } from './groups'
+import { subscribeHostField } from './hooks'
 
 /**
  * The Calendar plugin's persisted settings: event
@@ -124,8 +125,7 @@ export function useCalendarSettings(): CalendarSettings {
   React.useEffect(() => {
     const refresh = (): void => setSettings(readCalendarSettings())
     const offSettings = api.settings.subscribe(refresh)
-    // The host state subscription also fires when settings reload after a write.
-    const off = api.subscribe(refresh)
+    const off = subscribeHostField('groups', refresh)
     return () => {
       offSettings()
       off()

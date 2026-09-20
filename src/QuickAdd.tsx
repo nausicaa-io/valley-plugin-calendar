@@ -1,6 +1,5 @@
 import { React, api } from './runtime'
 import type { ReactElement, ReactNode } from 'react'
-import type { IndexEntry } from '@valley/plugin-sdk/types'
 import { parseAppOpenUrl } from '@valley/plugin-sdk/paths'
 import {
   AttachmentCard,
@@ -103,7 +102,6 @@ function Row({ glyph, children }: { glyph: ReactNode; children: ReactNode }): Re
 interface QuickAddProps {
   state: QuickAddState
   groups: import('@valley/plugin-sdk/types').ValleyGroup[]
-  indexEntries: IndexEntry[]
   onClose: () => void
   onAdded: () => void
 }
@@ -121,7 +119,7 @@ export function QuickAdd(props: QuickAddProps): ReactElement | null {
   return contributed ? null : <QuickAddForm {...props} />
 }
 
-function QuickAddForm({ state, groups, indexEntries, onClose, onAdded }: QuickAddProps): ReactElement {
+function QuickAddForm({ state, groups, onClose, onAdded }: QuickAddProps): ReactElement {
   const editing = state.editItem
   const draftKey = editing ? `${editing.sourceId ?? editing.kind}:${editing.id}` : `new:${state.kind ?? ''}:${state.date}:${state.startTime ?? ''}`
   // Which sources accept new items. Read once per mount: the tab strip must not
@@ -333,8 +331,7 @@ function QuickAddForm({ state, groups, indexEntries, onClose, onAdded }: QuickAd
                   clearable={false}
                   ariaLabel={isEvent ? uiText('calendar.quickadd.startDate') : uiText('calendar.quickadd.dueDate')}
                 />
-                {/* A span belongs to an event: a contributed item is dated by a
-                    single day, and `CalendarItemPatch` has nowhere to put a second. */}
+                {/* Contributed items open their provider's own editor. */}
                 {isEvent && (
                   <>
                     <span className="calendar-quickadd-dash" aria-hidden="true">→</span>
@@ -395,7 +392,6 @@ function QuickAddForm({ state, groups, indexEntries, onClose, onAdded }: QuickAd
               <FilePathInput
                 value={filePath}
                 onChange={setFilePath}
-                indexEntries={indexEntries}
               />
             </Row>
             <Row glyph={<Hash />}>
@@ -458,15 +454,12 @@ function QuickAddForm({ state, groups, indexEntries, onClose, onAdded }: QuickAd
                 ariaLabel={uiText('calendar.attachmentPath')}
                 onChange={(v) => {
                   setAttachmentDraft(v)
-                  // The picker reports a full relPath the moment a suggestion
-                  // is chosen; a half-typed query never matches an index entry.
-                  if (indexEntries.some((e) => e.relPath === v)) {
+                  if (v) {
                     if (!attachments.includes(v)) setAttachments([...attachments, v])
                     setAttachmentDraft('')
                     setAddingAttachment(false)
                   }
                 }}
-                indexEntries={indexEntries}
               />
             ) : null}
             {addingUrl ? (

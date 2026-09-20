@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { calendarCss } from '../src/styles'
 import { MAX_SPAN_DAYS, addDays, daysBetween, daysInRange } from '../src/dateMath'
 import { normalizeEventRecord } from '../src/events'
 import type { DataRecord } from '@valley/plugin-sdk/types'
@@ -21,7 +22,7 @@ describe('quick-add plugin boundary', () => {
   })
 
   it('defines every class the popover renders in its own stylesheet', () => {
-    const css = read('styles.ts')
+    const css = calendarCss
     const rendered = new Set<string>()
     for (const file of ['QuickAdd.tsx', 'fields.tsx']) {
       for (const [, list] of read(file).matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)) {

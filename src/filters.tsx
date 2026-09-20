@@ -17,7 +17,7 @@ import { groupKey } from '@valley/plugin-sdk/groups'
 import { paletteCssValue } from '@valley/plugin-sdk/palette'
 import type { CalItem } from './items'
 import { EVENTS_SOURCE_ID, NOTE_DATES_SOURCE_ID, providerSourceKey } from './settingsStore'
-import { useHostState } from './hooks'
+import { useNoteIndex } from './noteIndex'
 import { saveNoteDateSources, useNoteDateSources } from './noteDateStore'
 import { sourceMatchStats } from './noteDates'
 import { NoteDateGlyph, PushPin } from './icons'
@@ -256,7 +256,7 @@ function useNoteDateSourceFilter(): {
   saveHidden: (next: string[]) => Promise<boolean>
 } {
   const sources = useNoteDateSources()
-  const { indexEntries } = useHostState()
+  const indexEntries = useNoteIndex(sources)
   const shownSources = React.useMemo(() => sources.filter((source) => !source.hidden), [sources])
   const options = React.useMemo<CalendarFilterOption[]>(() => shownSources.map((source) => ({
     id: source.id,

@@ -2,9 +2,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { calendarCss } from '../src/styles'
 const ROOT = path.resolve(__dirname, '..')
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8')
-const SURFACES = [{ name: 'calendar source editor', view: read('src/NoteDateSettings.tsx'), css: read('src/styles.ts'), prefix: 'notedate-source', chipScope: '.notedate-source-color' }]
+const SURFACES = [{ name: 'calendar source editor', view: read('src/NoteDateSettings.tsx'), css: calendarCss, prefix: 'notedate-source', chipScope: '.notedate-source-color' }]
 
 describe('source editor control contract', () => {
   it.each(SURFACES)('$name draws both colours with the kit ColorField', ({ view }) => {

@@ -314,5 +314,13 @@
   "backend.microsoft": "Microsoft Graph calendar fetch failed: {{status}}",
   "backend.googleList": "Google Calendar list failed: {{status}}",
   "backend.googleFetch": "Google Calendar fetch failed: {{status}}",
-  "calendar.error.atomicLimit": "This change exceeds the atomic limit of 1000 operations. Remove fewer sources at once."
+  "calendar.error.atomicLimit": "This change exceeds the atomic limit of 1000 operations. Remove fewer sources at once.",
+  "calendar.source.incompatible": "Calendar source “{{owner}}” uses an incompatible version. Update it to support dated, paged requests (v2).",
+  "calendar.source.failed": "Calendar source “{{owner}}”: {{message}}",
+  "calendar.source.pageRevision": "The source returned an invalid or changed page revision.",
+  "calendar.source.rangeLimit": "The requested range exceeds {{limit}} items. Choose a smaller range.",
+  "calendar.source.invalidItems": "The source returned duplicate or out-of-range items.",
+  "calendar.source.cursor": "The source returned a page cursor that does not advance.",
+  "calendar.source.pageBudget": "The requested range exceeds the page budget.",
+  "calendar.source.unavailable": "The source is unavailable."
 }

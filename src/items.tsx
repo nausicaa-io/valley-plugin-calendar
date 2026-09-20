@@ -151,6 +151,7 @@ export function sourcedToItem({ sourceId, sourceOwner, labelKey, item, editable 
     id: item.id,
     title: item.title,
     date: item.date,
+    ...(item.endDate ? { endDate: item.endDate } : {}),
     startTime: item.startTime,
     endTime: item.endTime,
     completed: item.completed,
@@ -460,8 +461,13 @@ export async function persistItemMove(
   const now = new Date().toISOString()
   if (item.readOnly) return // remote calendar events can't be moved
   if (item.kind === 'sourced' && item.sourced && item.sourceId) {
-    // The provider decides what "moved to this day" means for its record.
-    await updateSourcedItem(item.sourceId, item.sourced.id, { date, startTime, endTime })
+    const shift = daysBetween(item.date, date)
+    await updateSourcedItem(item.sourceId, item.sourced.id, {
+      date: addDays(item.sourced.date, shift),
+      ...(item.sourced.endDate ? { endDate: addDays(item.sourced.endDate, shift) } : {}),
+      startTime,
+      endTime
+    })
   } else if (item.kind === 'event' && item.event) {
     // A span is dragged by one of its days, so the record's own start is not
     // where the drag began: shift both ends by the distance the *grabbed* day
